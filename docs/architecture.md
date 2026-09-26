@@ -1,1044 +1,335 @@
-# YatraAI — System Architecture
+# YatraAI — Hackathon Prototype Architecture
 
-## 1. Project Overview
+## 1. Prototype goal
 
-YatraAI is an AI-powered tourism platform designed to help tourists:
+YatraAI helps a tourist discover Bharatpur, understand what they are seeing, and get help during an emergency.
 
-1. **Choose safer and more suitable destinations**
-2. **Stay protected during their journey**
-3. **Understand and explore cultural destinations**
-4. **Connect with verified guides**
-5. **Request emergency assistance through SOS**
+The prototype contains exactly three product flows:
 
-The system is built as a **Next.js application with REST APIs**, using Supabase/PostgreSQL for persistent data and external services for maps, weather, AI, and other live information.
+1. **Recommendation:** create a simple personalized Bharatpur itinerary.
+2. **Virtual guide:** answer a question or explain a photo of a supported place or object.
+3. **SOS:** show emergency information and start call or SMS actions, even when the internet is unavailable.
 
----
+The architecture is deliberately small. It is designed to produce a reliable demo before adding accounts, dashboards, live monitoring, or large-scale data systems.
 
-# 2. High-Level Architecture
+## 2. Technology decision
 
-```text
-                         ┌──────────────────────┐
-                         │       TOURIST        │
-                         │   Web / PWA Client   │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │      NEXT.JS APP     │
-                         │      Frontend        │
-                         └──────────┬───────────┘
-                                    │
-                              REST API
-                                    │
-                                    ▼
-                    ┌───────────────────────────────┐
-                    │       YATRAAI BACKEND         │
-                    │       Next.js API Routes      │
-                    └───────────────┬───────────────┘
-                                    │
-              ┌─────────────────────┼─────────────────────┐
-              │                     │                     │
-              ▼                     ▼                     ▼
-       ┌────────────┐        ┌────────────┐       ┌────────────┐
-       │ AI / FLOW  │        │   SAFETY   │       │  VISION /  │
-       │   ENGINE   │        │   ENGINE   │       │ CULTURAL AI│
-       └─────┬──────┘        └─────┬──────┘       └─────┬──────┘
-             │                     │                     │
-             └─────────────────────┼─────────────────────┘
-                                   │
-                                   ▼
-                         ┌──────────────────────┐
-                         │  SUPABASE / POSTGRES │
-                         │       DATABASE       │
-                         └──────────────────────┘
-                                   │
-                ┌──────────────────┼──────────────────┐
-                │                  │                  │
-                ▼                  ▼                  ▼
-           Weather API         Maps API           AI API
+| Part | Prototype choice | Responsibility |
+|---|---|---|
+| Web app | Next.js | Screens, camera, browser speech, offline SOS screen |
+| API | FastAPI | Recommendation logic, guide requests, optional SOS sync |
+| Data | JSON files | Curated Bharatpur places, guide facts, emergency information |
+| AI | One vision/chat provider | Image understanding and conversational answers |
+| Offline storage | Service worker + localStorage | Cached SOS screen, contacts, and queued events |
+
+There is no authentication, Supabase, PostgreSQL, Redis, map server, weather server, or separate microservice in the first version. A small SQLite database can replace JSON later without changing the feature boundaries.
+
+## 3. High-level architecture
+
+```mermaid
+flowchart LR
+    Tourist[Tourist phone]
+    Web[Next.js PWA\nrecommendations + guide + SOS]
+    API[FastAPI\nsmall REST API]
+    Data[(Curated JSON\nplaces + guide + emergency)]
+    AI[AI provider\nchat + image understanding]
+    Phone[Phone call/SMS app]
+
+    Tourist --> Web
+    Web --> API
+    API --> Data
+    API --> AI
+    Web --> Phone
 ```
 
----
+The browser never receives the AI API key. The key stays in FastAPI environment variables.
 
-# 3. Main System Modules
+## 4. Responsibilities
 
-YatraAI consists of three primary engines.
+### Next.js
 
-```text
-                    YATRAAI
-                       │
-       ┌───────────────┼────────────────┐
-       │               │                │
-       ▼               ▼                ▼
-  FLOW ENGINE     SAFETY ENGINE    VISION ENGINE
-       │               │                │
-       ▼               ▼                ▼
-Destination       Live Safety       AI Scan
-Recommendation    Monitoring        Identification
-Alternative       Risk Zones        Cultural Context
-Scoring           Check-ins         Ask AI
-Crowd Analysis    SOS               Nearby
-Safety Analysis   Guide Status      Experiences
-```
+- Render the home screen and the three feature screens.
+- Collect recommendation preferences.
+- Capture a camera image and send it to FastAPI.
+- Send text questions to FastAPI.
+- Use browser text-to-speech when available.
+- Cache the SOS route and emergency data.
+- Open `tel:` and `sms:` actions from the SOS screen.
 
----
+### FastAPI
 
-# 4. Frontend Architecture
+- Validate incoming request data.
+- Filter and score places for recommendations.
+- Load the small local guide context.
+- Call the AI provider for guide chat and image analysis.
+- Return predictable JSON responses.
+- Accept SOS events when connectivity returns.
 
-Frontend is implemented using **Next.js / React**.
+### Local data
+
+Keep the first dataset small and verified by the team:
 
 ```text
-app/
-│
-├── page.tsx                    # Landing page
-│
-├── dashboard/
-│   └── page.tsx                # Tourist dashboard
-│
-├── trip/
-│   ├── page.tsx                # Trip setup
-│   └── [id]/
-│       └── page.tsx            # Active trip
-│
-├── safety/
-│   └── page.tsx                # Safety dashboard
-│
-├── destinations/
-│   ├── page.tsx                # Destination discovery
-│   └── [id]/
-│       └── page.tsx            # Destination details
-│
-├── scan/
-│   └── page.tsx                # Vision / cultural guide
-│
-├── guide/
-│   └── [id]/
-│       └── page.tsx            # Guide information
-│
-├── sos/
-│   └── page.tsx                # Emergency screen
-│
-└── api/
-    ├── trips/
-    ├── safety/
-    ├── checkins/
-    ├── sos/
-    ├── guides/
-    ├── destinations/
-    ├── recommendations/
-    └── vision/
+backend/data/
+  places.json       # 15–25 Bharatpur places
+  guide.json        # short facts for supported landmarks and objects
+  emergency.json    # emergency numbers, hospitals, police, and instructions
 ```
 
----
+## 5. Recommendation flow
 
-# 5. Backend Architecture
+The recommendation system is rule-based. It does not need machine learning for the demo.
 
-The backend uses **Next.js Route Handlers** to expose REST APIs.
+```mermaid
+sequenceDiagram
+    actor Tourist
+    participant Web as Next.js
+    participant API as FastAPI
+    participant Data as places.json
 
-```text
-Frontend
-   │
-   │ HTTP
-   ▼
-Next.js API Routes
-   │
-   ├── Authentication
-   │
-   ├── Validation
-   │
-   ├── Business Logic
-   │
-   ├── AI Processing
-   │
-   └── Database Operations
-           │
-           ▼
-      Supabase/PostgreSQL
+    Tourist->>Web: Select days, interests, budget, and traveler type
+    Web->>API: POST /api/recommendations
+    API->>Data: Load Bharatpur places
+    API->>API: Filter and score places
+    API-->>Web: Itinerary and reasons
+    Web-->>Tourist: Show itinerary and regenerate action
 ```
 
-The backend should separate:
-
-* API handling
-* Business logic
-* External API integration
-* Database operations
-
-This prevents the frontend from directly controlling critical safety logic.
-
----
-
-# 6. REST API Structure
-
-## Trips
-
-```text
-POST   /api/trips
-GET    /api/trips
-GET    /api/trips/:id
-PATCH  /api/trips/:id
-```
-
-Responsibilities:
-
-* Create trip
-* Retrieve trip
-* Start/end trip
-* Associate tourist and guide
-* Store destination and route
-
----
-
-## Safety
-
-```text
-GET    /api/safety/:tripId
-GET    /api/safety/risk-zones
-GET    /api/safety/emergency-facilities
-```
-
-Responsibilities:
-
-* Calculate safety information
-* Retrieve risk zones
-* Check connectivity areas
-* Retrieve nearby emergency facilities
-
----
-
-## Check-ins
-
-```text
-POST   /api/checkins
-GET    /api/checkins/:tripId
-```
-
-Example:
+Required inputs:
 
 ```json
 {
-  "tripId": "trip_001",
-  "latitude": 27.58,
-  "longitude": 84.49,
-  "status": "SAFE"
+  "days": 2,
+  "budget": "medium",
+  "interests": ["culture", "nature"],
+  "traveler_type": "family",
+  "language": "en"
 }
 ```
 
----
-
-## SOS
+Use a transparent score:
 
 ```text
-POST   /api/sos
-GET    /api/sos/:id
-PATCH  /api/sos/:id
+score = interest_match
+      + budget_match
+      + traveler_match
+      + safety_score
+      - repeated_category_penalty
 ```
 
-Example:
+`Safety score` is a static field maintained by the team. It is not a live safety engine.
+
+Example place record:
 
 ```json
 {
-  "tripId": "trip_001",
-  "reason": "WILDLIFE",
-  "latitude": 27.58,
-  "longitude": 84.49
+  "id": "bharatpur-museum",
+  "name": "Bharatpur Museum",
+  "categories": ["culture", "history"],
+  "budget": "low",
+  "good_for": ["family", "solo"],
+  "safety_score": 5,
+  "duration_minutes": 90,
+  "summary": "A place to learn about the history and culture of Bharatpur."
 }
 ```
 
-SOS should store the tourist's latest known location and trip information.
+The API should select real places first. If the team later uses AI to explain the itinerary, the model only rewrites the selected places; it must not invent new destinations.
 
----
+## 6. Virtual guide flow
 
-## Guides
+The guide has two entry points:
 
-```text
-GET    /api/guides/:id
-GET    /api/guides/:id/tourists
-POST   /api/guides/verify
+- **Ask:** type or speak a question.
+- **See:** take a photo and receive a short explanation.
+
+```mermaid
+sequenceDiagram
+    actor Tourist
+    participant Web as Next.js guide
+    participant API as FastAPI
+    participant Data as guide.json
+    participant AI as AI provider
+
+    Tourist->>Web: Ask question or take photo
+    Web->>API: Text/image + language
+    API->>Data: Load relevant curated facts
+    API->>AI: Request concise answer using local context
+    AI-->>API: Answer and confidence
+    API-->>Web: Structured guide response
+    Web-->>Tourist: Show text and optional speech
 ```
 
-Guide verification includes:
+For the first demo, support a small set of known Bharatpur landmarks, cultural objects, local food, and wildlife. When confidence is low, return a clear message such as “I could not identify this confidently.”
 
-```text
-Identity
-Registration / Credential
-Trip Association
-Contact
-Assigned Tourists
-```
-
----
-
-## Destinations
-
-```text
-GET    /api/destinations
-GET    /api/destinations/:id
-```
-
----
-
-## Recommendations
-
-```text
-POST   /api/recommendations
-```
-
-Input:
+Guide response:
 
 ```json
 {
-  "budget": 5000,
-  "timeAvailable": 2,
-  "interests": [
-    "culture",
-    "nature"
-  ],
-  "destination": "Chitwan"
+  "title": "Bharatpur Museum",
+  "summary": "A short explanation in the selected language.",
+  "confidence": "high",
+  "suggested_questions": [
+    "What should I see here?",
+    "What can I visit nearby?"
+  ]
 }
 ```
 
-Output:
+Text input and text output are required. Browser speech recognition and text-to-speech are optional enhancements because browser support can vary.
+
+## 7. Offline SOS flow
+
+SOS must open without waiting for FastAPI. During normal use, the app caches the SOS screen and emergency pack.
+
+```mermaid
+flowchart TD
+    Open[Tap SOS] --> Screen[Open cached SOS screen]
+    Screen --> Info[Show cached numbers, hospitals, contacts, and instructions]
+    Screen --> GPS[Try browser location]
+    GPS --> Actions[Show call, SMS, and location actions]
+    Info --> Actions
+    Actions --> Local[Store timestamp and location locally]
+    Local --> Sync[Sync event when internet returns]
+```
+
+Prototype behavior:
+
+- Keep the SOS button on the home screen.
+- Cache the SOS route and emergency pack with a service worker.
+- Store user emergency contacts in `localStorage` or `IndexedDB`.
+- Use `navigator.geolocation` when the device permits it.
+- Use `tel:` to start a call and `sms:` to prepare a message.
+- Store a local event even if `/api/sos/sync` cannot be reached.
+
+A browser cannot silently place a call or send an SMS. The phone’s call or messaging app must be confirmed by the tourist. Cellular calls and SMS may still work when mobile internet does not. If there is no network of any kind, the app can still show cached instructions and the last available location.
+
+## 8. Minimal API
+
+```text
+GET  /api/health
+POST /api/recommendations
+POST /api/guide/chat
+POST /api/guide/analyze-image
+POST /api/sos/sync
+```
+
+The SOS endpoint is best-effort telemetry. The actual emergency actions must work without it.
+
+### Recommendation response
 
 ```json
 {
-  "destination": "Sauraha",
-  "score": 87,
-  "reason": "Strong match for nature and culture interests."
+  "days": [
+    {
+      "day": 1,
+      "places": [
+        {
+          "id": "bharatpur-museum",
+          "name": "Bharatpur Museum",
+          "reason": "Matches your culture interest and family group."
+        }
+      ]
+    }
+  ]
 }
 ```
 
----
+### Guide requests
 
-## Vision
+`/api/guide/chat` accepts text and language.
 
-```text
-POST   /api/vision
-```
+`/api/guide/analyze-image` accepts a compressed image, optional question, and language.
 
-Input:
+Both return the same guide response shape so the frontend has one display component.
 
-```text
-Image
-Location
-Optional question
-```
-
-Output:
-
-```json
-{
-  "name": "Tharu Cultural Museum",
-  "description": "...",
-  "culturalContext": "...",
-  "nearby": []
-}
-```
-
----
-
-# 7. AI Flow Engine
-
-The Flow Engine combines tourist preferences with destination and live information.
+## 9. Minimal folder structure
 
 ```text
-                 TOURIST DATA
-                      │
-       ┌──────────────┼──────────────┐
-       ▼              ▼              ▼
-    Budget         Interests       Time
-       │              │              │
-       └──────────────┼──────────────┘
-                      ▼
-               YATRAAI ENGINE
-                      │
-       ┌──────────────┼──────────────┐
-       ▼              ▼              ▼
-   Destination      Weather        Crowd
-      Data            Data          Data
-       │              │              │
-       └──────────────┼──────────────┘
-                      ▼
-                FLOW SCORE
-                      │
-            ┌─────────┴─────────┐
-            ▼                   ▼
-     Recommended            Alternative
-     Destination            Destination
-            │                   │
-            └─────────┬─────────┘
-                      ▼
-                Explanation
-                      │
-                      ▼
-               TOURIST CHOICE
+yatraai/
+  app/
+    page.tsx                 # home and feature links
+    discover/page.tsx        # recommendations
+    guide/page.tsx           # camera and chat
+    sos/page.tsx             # offline SOS
+    settings/page.tsx        # language and contacts
+  components/
+    PlaceCard.tsx
+    GuideAnswer.tsx
+    EmergencyActions.tsx
+  lib/
+    api.ts
+    offline.ts
+  public/
+    emergency-pack.json
+    sw.js
+  backend/
+    main.py
+    data/
+      places.json
+      guide.json
+      emergency.json
+    routes/
+      recommendations.py
+      guide.py
+      sos.py
 ```
 
----
+The current repository is still a starter Next.js app, so the `backend/` directory and feature routes will be added during implementation.
 
-# 8. Flow Score
+## 10. Build order
 
-The prototype can use a weighted scoring model.
+### Step 1 — Frontend shell
 
-```text
-Flow Score
+- Replace the starter page with a mobile home screen.
+- Add Discover, Virtual Guide, and SOS cards.
+- Add language selection and a visible SOS action.
 
-Tourist Fit          35%
-Safety               25%
-Weather              15%
-Crowd                10%
-Travel Efficiency    10%
-Local Opportunity     5%
-```
+### Step 2 — Recommendation vertical slice
 
-Formula:
+- Add `places.json` with 15–25 Bharatpur places.
+- Add the FastAPI recommendation endpoint.
+- Implement filtering, scoring, and an itinerary response.
+- Display the itinerary in Next.js.
 
-```text
-Flow Score =
-(Tourist Fit × 0.35)
-+ (Safety × 0.25)
-+ (Weather × 0.15)
-+ (Crowd × 0.10)
-+ (Travel Efficiency × 0.10)
-+ (Local Opportunity × 0.05)
-```
+### Step 3 — Guide vertical slice
 
-The scoring model should remain configurable so the weights can be changed later.
+- Add text chat first.
+- Add `guide.json` and a small AI prompt.
+- Add image analysis for a few known places.
+- Add browser speech only if stable on the demo device.
 
----
+### Step 4 — SOS vertical slice
 
-# 9. Safety Engine
+- Add cached emergency data and the SOS route.
+- Add contacts, location, call, and SMS actions.
+- Test with airplane mode enabled.
 
-The Safety Engine continuously evaluates the active trip.
+### Step 5 — Demo polish
 
-```text
-Tourist Location
-       │
-       ▼
-Planned Route
-       │
-       ├──────────────┐
-       ▼              ▼
-Destination       Risk Zones
-Conditions
-       │              │
-       ├──────────────┤
-       ▼
-    Weather
-       │
-       ▼
- Connectivity
-       │
-       ▼
-  Time / Duration
-       │
-       ▼
-  SAFETY ENGINE
-       │
- ┌─────┼──────┐
- ▼     ▼      ▼
-Normal Warning Critical
-```
+- Add loading and error states.
+- Add an offline indicator.
+- Add confidence and fallback messages for the guide.
+- Prepare one scripted demo for each feature.
 
----
+## 11. Demo acceptance criteria
 
-# 10. Risk Zone Detection
+The prototype is ready when:
 
-Risk zones can contain:
+1. A tourist selects preferences and receives a Bharatpur itinerary using real seeded places.
+2. A tourist asks a question or scans a supported place and receives a concise answer in English, Nepali, or Hindi.
+3. A tourist enables airplane mode, opens SOS, sees cached emergency information, and can start a call or prepared SMS.
 
-```text
-risk_zones
-──────────
-id
-name
-latitude
-longitude
-radius
-risk_type
-severity
-description
-```
+## 12. Explicitly postponed
 
-Possible risk types:
+These are future improvements, not prototype requirements:
 
-```text
-LOW_CONNECTIVITY
-WILDLIFE
-WEATHER
-FLOOD
-LANDSLIDE
-ACCIDENT_PRONE
-OTHER
-```
-
-The system compares the tourist's current coordinates against predefined risk zones.
-
-If the tourist enters a risk zone:
-
-```text
-Location
-   │
-   ▼
-Risk Zone Check
-   │
-   ├── Outside → Continue
-   │
-   └── Inside
-         │
-         ▼
-      Warning
-         │
-         ▼
-   Safety Check-in
-```
-
----
-
-# 11. Safety Check-in
-
-When a tourist enters a low-connectivity or elevated-risk area:
-
-```text
-⚠️ LOW CONNECTIVITY AREA
-
-Would you like Safety Check-In
-enabled for this route?
-
-[ ENABLE ]
-```
-
-If enabled:
-
-```text
-Safety Check-In
-
-Next Check-in:
-12 minutes
-
-[ I'M SAFE ]
-```
-
-If the tourist does not check in within the configured period:
-
-```text
-CHECK-IN OVERDUE
-       │
-       ▼
-Increase Risk Status
-       │
-       ▼
-Notify Guide
-```
-
-For the hackathon prototype, this can be simulated using timers.
-
----
-
-# 12. SOS Architecture
-
-SOS is designed for minimum interaction.
-
-```text
-              SOS
-               │
-               ▼
-        I'M IN DANGER
-               │
-        ┌──────┴──────┐
-        ▼             ▼
-   Select Reason   Skip Reason
-        │             │
-        └──────┬──────┘
-               ▼
-          Create SOS
-               │
-       ┌───────┼────────┐
-       ▼       ▼        ▼
-    Location  Trip     Guide
-       │       │        │
-       └───────┼────────┘
-               ▼
-          SOS EVENT
-```
-
-SOS event:
-
-```text
-sos_events
-──────────
-id
-trip_id
-tourist_id
-guide_id
-latitude
-longitude
-reason
-timestamp
-status
-```
-
-Possible status:
-
-```text
-ACTIVE
-ACKNOWLEDGED
-RESOLVED
-CANCELLED
-```
-
----
-
-# 13. Vision & Cultural Guide
-
-```text
-Tourist
-   │
-   ▼
-Camera
-   │
-   ▼
-Image
-   │
-   ▼
-Vision AI
-   │
-   ▼
-Object / Place Identification
-   │
-   ▼
-Cultural Context
-   │
-   ├─────────────┐
-   ▼             ▼
- Listen         Read
-   │             │
-   └──────┬──────┘
-          ▼
-       Ask AI
-          │
-          ▼
-   Explore Nearby
-          │
-     ┌────┼────┐
-     ▼    ▼    ▼
-    Food Craft Experience
-```
-
----
-
-# 14. Guide Verification
-
-Guide records:
-
-```text
-guides
-──────
-id
-name
-phone
-registration_no
-identity_verified
-credential_verified
-status
-```
-
-Verification status:
-
-```text
-PENDING
-VERIFIED
-REJECTED
-```
-
-A verified guide can be associated with a trip.
-
-```text
-Tourist
-   │
-   ▼
-Trip
-   │
-   ▼
-Guide
-   │
-   ├── Identity ✓
-   ├── Credential ✓
-   └── Trip Association ✓
-```
-
----
-
-# 15. Database Architecture
-
-Primary database:
-
-**Supabase PostgreSQL**
-
-Core tables:
-
-```text
-users
-tourists
-guides
-destinations
-trips
-risk_zones
-checkins
-sos_events
-recommendations
-weather_data
-saved_places
-feedback
-```
-
-Basic relationships:
-
-```text
-USER
- │
- ├── TOURIST
- │      │
- │      └── TRIPS
- │             │
- │             ├── DESTINATION
- │             ├── GUIDE
- │             ├── CHECKINS
- │             ├── SOS EVENTS
- │             └── RECOMMENDATIONS
- │
- └── GUIDE
-        │
-        └── TRIPS
-```
-
----
-
-# 16. External Services
-
-The system may integrate with:
-
-```text
-Maps / Geolocation
-       │
-       ├── Route
-       ├── Distance
-       └── Location
-
-Weather API
-       │
-       ├── Temperature
-       ├── Rain
-       ├── Wind
-       └── Weather alerts
-
-AI / Vision API
-       │
-       ├── Recommendation explanation
-       ├── Cultural information
-       └── Image identification
-```
-
-External services should be accessed from the backend whenever API keys or sensitive credentials are involved.
-
-```text
-Frontend
-   │
-   ▼
-Next.js API
-   │
-   ▼
-External API
-```
-
-Do not expose private API keys in client-side code.
-
----
-
-# 17. Authentication
-
-Authentication can be handled using **Supabase Auth**.
-
-```text
-User
- │
- ▼
-Login / Signup
- │
- ▼
-Supabase Auth
- │
- ▼
-User Session
- │
- ▼
-Application
-```
-
-Roles:
-
-```text
-TOURIST
-GUIDE
-ADMIN
-```
-
-Role-based access:
-
-```text
-TOURIST
- ├── Own trips
- ├── Safety
- ├── Check-in
- ├── SOS
- └── Vision Guide
-
-GUIDE
- ├── Assigned trips
- ├── Assigned tourists
- ├── Check-in status
- └── SOS alerts
-
-ADMIN
- ├── Guides
- ├── Destinations
- ├── Risk zones
- └── System data
-```
-
----
-
-# 18. Security Principles
-
-The system handles sensitive tourist information.
-
-Minimum requirements:
-
-* Never expose API keys in frontend code.
-* Validate API inputs.
-* Authenticate protected API routes.
-* Authorize users before accessing trip data.
-* Do not allow tourists to modify another tourist's trip.
-* Restrict guide access to assigned tourists.
-* Store only necessary location information.
-* Protect SOS information.
-* Use environment variables for secrets.
-
-Example:
-
-```text
-.env.local
-
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-AI_API_KEY=
-WEATHER_API_KEY=
-MAPS_API_KEY=
-```
-
-Never commit `.env.local` to Git.
-
----
-
-# 19. Project Folder Structure
-
-Recommended structure:
-
-```text
-yatra_ai/
-│
-├── app/
-│   ├── api/
-│   ├── dashboard/
-│   ├── trip/
-│   ├── safety/
-│   ├── destinations/
-│   ├── guide/
-│   ├── scan/
-│   └── sos/
-│
-├── components/
-│   ├── map/
-│   ├── safety/
-│   ├── trip/
-│   ├── guide/
-│   ├── sos/
-│   └── ui/
-│
-├── lib/
-│   ├── supabase/
-│   ├── ai/
-│   ├── weather/
-│   ├── maps/
-│   ├── safety/
-│   └── scoring/
-│
-├── types/
-│
-├── public/
-│
-├── supabase/
-│   └── migrations/
-│
-├── .env.local
-├── .env.example
-├── architecture.md
-├── package.json
-└── README.md
-```
-
----
-
-# 20. Development Rules
-
-## Git
-
-Developers should **not work directly on `main`**.
-
-Create feature branches:
-
-```text
-feature/safety-monitoring
-feature/vision-guide
-feature/guide-verification
-feature/flow-engine
-feature/sos
-```
-
-Workflow:
-
-```text
-main
- │
- └── feature branch
-        │
-        ├── development
-        ├── commit
-        └── push
-              │
-              ▼
-        Pull Request
-              │
-              ▼
-             main
-```
-
----
-
-# 21. Development Priorities
-
-For the hackathon prototype:
-
-### Priority 1 — Core Demo
-
-```text
-✓ Destination recommendation
-✓ Safety score
-✓ Route/risk detection
-✓ Live trip simulation
-✓ Low-connectivity warning
-✓ Safety check-in
-✓ SOS
-```
-
-### Priority 2
-
-```text
-✓ Guide verification
-✓ Emergency facilities
-✓ Vision / cultural guide
-```
-
-### Priority 3
-
-```text
-○ Real crowd prediction
-○ Advanced ML
-○ Government verification integration
-○ Offline-first emergency communication
-○ Large-scale tourist analytics
-```
-
-The prototype should prioritize a **working end-to-end journey** over implementing every possible feature.
-
----
-
-# 22. End-to-End User Journey
-
-```text
-                    TOURIST
-                       │
-                       ▼
-              Select Destination
-                       │
-                       ▼
-                YATRAAI ANALYSIS
-                       │
-        ┌──────────────┼──────────────┐
-        ▼              ▼              ▼
-      Safety         Weather         Crowd
-        │              │              │
-        └──────────────┼──────────────┘
-                       ▼
-                FLOW SCORE
-                       │
-                       ▼
-              Recommendation
-                       │
-                       ▼
-                 Start Trip
-                       │
-                       ▼
-              LIVE MONITORING
-                       │
-          ┌────────────┼────────────┐
-          ▼            ▼            ▼
-       Location      Risk       Connectivity
-          │            │            │
-          └────────────┼────────────┘
-                       ▼
-                Safety Check-in
-                       │
-                       ▼
-                 Destination
-                       │
-                       ▼
-                  AI Vision
-                       │
-                       ▼
-              Cultural Discovery
-                       │
-                       ▼
-                  Feedback
-                       │
-                       ▼
-                 YATRAAI LEARNS
-```
-
----
-
-# 23. Hackathon Prototype Principle
-
-YatraAI should demonstrate this complete loop:
-
-```text
-       CHOOSE
-          ↓
-       PREPARE
-          ↓
-        TRAVEL
-          ↓
-       MONITOR
-          ↓
-       EXPLORE
-          ↓
-       PROTECT
-          ↓
-       FEEDBACK
-          ↓
-        LEARN
-```
-
-The goal of the prototype is not to implement a complete nationwide tourism infrastructure.
-
-The goal is to demonstrate that **one connected YatraAI system can understand a tourist's journey, recommend safer choices, monitor risk during travel, provide cultural assistance, and respond to emergencies.**
+- Supabase and user authentication.
+- Tourist, guide, and admin roles.
+- Guide verification and trip assignment.
+- Live location monitoring.
+- Risk-zone alerts and timed check-ins.
+- Weather, crowd, and route APIs.
+- Maps and route optimization.
+- Feedback learning and analytics dashboards.
+- Microservices, Redis, vector databases, and model fine-tuning.
