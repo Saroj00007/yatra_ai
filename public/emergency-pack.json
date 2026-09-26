@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "generated_at": "2026-09-26T00:00:00Z",
+  "place": "Bharatpur, India",
+  "emergency_numbers": [
+    { "label": "Police", "number": "100", "type": "call" },
+    { "label": "Ambulance", "number": "102", "type": "call" },
+    { "label": "Fire", "number": "101", "type": "call" },
+    { "label": "Women helpline", "number": "181", "type": "call" }
+  ],
+  "hospitals": [
+    { "name": "Bharatpur District Hospital", "phone": "+91-5644-220220" },
+    { "name": "Shri Krishna Hospital", "phone": "+91-5644-224100" }
+  ],
+  "instructions": [
+    "Stay calm. Move to an open area if safe.",
+    "Call the number above or use the SMS option if calls fail.",
+    "Share your live location with emergency contacts.",
+    "This information is cached and works without internet."
+  ]
+}
