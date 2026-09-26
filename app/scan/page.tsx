@@ -1,10 +1,24 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  Camera,
+  CheckCircle2,
+  ImagePlus,
+  MapPin,
+  MessageCircle,
+  Send,
+  Sparkles,
+  X,
+} from "lucide-react";
+import BottomNav from "../components/bottom-nav";
+import { api, type GuideResponse } from "../lib/api";
 
 export default function ScanPage() {
   const [question, setQuestion] = useState("");
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<GuideResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -13,9 +27,7 @@ export default function ScanPage() {
   const [stream, setStream] = useState<MediaStream | null>(null);
 
   useEffect(() => {
-    return () => {
-      stream?.getTracks().forEach((t) => t.stop());
-    };
+    return () => stream?.getTracks().forEach((track) => track.stop());
   }, [stream]);
 
   async function askText(e: React.FormEvent) {
@@ -24,16 +36,9 @@ export default function ScanPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/guide/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: question.trim(), language: "en" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Guide unavailable");
-      setResult(data);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong");
+      setResult(await api.guideChat({ question: question.trim(), language: "en" }));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -46,15 +51,9 @@ export default function ScanPage() {
     fd.append("image", file);
     fd.append("language", "en");
     try {
-      const res = await fetch("/api/guide/analyze-image", {
-        method: "POST",
-        body: fd,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Could not analyze image");
-      setResult(data);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong");
+      setResult(await api.analyzeImage(fd));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -62,18 +61,14 @@ export default function ScanPage() {
 
   async function startCamera() {
     try {
-      const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: false,
-      });
-      setStream(s);
+      const nextStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+      setStream(nextStream);
       setCamera(true);
       if (videoRef.current) {
-        videoRef.current.srcObject = s;
+        videoRef.current.srcObject = nextStream;
         await videoRef.current.play();
       }
     } catch {
-      // Fall back to file upload if camera is unavailable.
       fileRef.current?.click();
     }
   }
@@ -83,142 +78,91 @@ export default function ScanPage() {
     const canvas = document.createElement("canvas");
     canvas.width = videoRef.current.videoWidth || 640;
     canvas.height = videoRef.current.videoHeight || 480;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.drawImage(videoRef.current, 0, 0);
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.drawImage(videoRef.current, 0, 0);
     canvas.toBlob((blob) => {
       if (blob) askImage(new File([blob], "capture.jpg", { type: "image/jpeg" }));
     }, "image/jpeg", 0.8);
   }
 
   function stopCamera() {
-    stream?.getTracks().forEach((t) => t.stop());
+    stream?.getTracks().forEach((track) => track.stop());
     setStream(null);
     setCamera(false);
   }
 
   return (
-    <div className="min-h-screen bg-white text-zinc-900 px-5 pb-28 pt-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">Scan</h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            Camera + text in one place.
-          </p>
+    <div className="app-shell page-shell">
+      <header className="page-topbar">
+        <Link href="/" className="back-link" aria-label="Back to home">
+          <ArrowLeft size={17} strokeWidth={2.1} />
+        </Link>
+        <div className="page-heading">
+          <h1>Look closer</h1>
+          <p>Use a photo or ask in your own words.</p>
         </div>
         {camera && (
-          <button
-            onClick={stopCamera}
-            className="text-sm font-medium text-zinc-500"
-          >
-            Close
+          <button onClick={stopCamera} className="back-link ml-auto" aria-label="Close camera">
+            <X size={17} strokeWidth={2.1} />
           </button>
         )}
-      </div>
+      </header>
 
-      {/* Camera view */}
       {camera ? (
-        <div className="mt-5 relative">
-          <video
-            ref={videoRef}
-            playsInline
-            className="w-full rounded-2xl bg-zinc-900 aspect-video object-cover"
-          />
-          <button
-            onClick={capture}
-            className="absolute -bottom-4 left-1/2 -translate-x-1/2 h-14 w-14 rounded-full bg-white border-4 border-zinc-200 shadow-lg active:scale-95 transition-transform"
-            aria-label="Capture photo"
-          />
+        <div className="camera-stage">
+          <video ref={videoRef} playsInline aria-label="Camera preview" />
+          <span className="camera-stage__corners" aria-hidden="true" />
+          <button onClick={capture} className="capture-button" aria-label="Capture photo" />
         </div>
       ) : (
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <button
-            onClick={startCamera}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-zinc-900 py-6 text-white active:scale-95 transition-transform"
-          >
-            <span className="text-2xl">📷</span>
-            <span className="text-sm font-semibold">Open camera</span>
+        <div className="capture-grid">
+          <button onClick={startCamera} className="capture-option capture-option--primary pressable">
+            <span className="capture-option__icon" aria-hidden="true"><Camera size={17} /></span>
+            <span className="capture-option__title">Open camera</span>
           </button>
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-zinc-300 py-6 active:scale-95 transition-transform"
-          >
-            <span className="text-2xl">🖼️</span>
-            <span className="text-sm font-semibold">Upload image</span>
+          <button onClick={() => fileRef.current?.click()} className="capture-option pressable">
+            <span className="capture-option__icon" aria-hidden="true"><ImagePlus size={17} /></span>
+            <span className="capture-option__title">Choose a photo</span>
           </button>
         </div>
       )}
 
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) askImage(f);
-        }}
-      />
+      <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) askImage(file); }} />
 
-      {/* Text ask */}
-      <form onSubmit={askText} className="mt-5 flex gap-2">
-        <input
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Ask about a place, object, or food…"
-          className="flex-1 rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white disabled:opacity-50"
-        >
-          Send
+      <form onSubmit={askText} className="question-box">
+        <MessageCircle size={16} className="text-river" aria-hidden="true" />
+        <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask about a place, object, or food" aria-label="Ask a question" />
+        <button type="submit" disabled={loading || !question.trim()} aria-label="Send question">
+          <Send size={15} strokeWidth={2.2} />
         </button>
       </form>
 
-      {loading && (
-        <div className="mt-6 flex items-center gap-3 text-sm text-zinc-500">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-900 border-t-transparent" />
-          Thinking…
-        </div>
-      )}
-
-      {error && (
-        <p className="mt-6 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {error}
-        </p>
-      )}
+      {loading && <div className="status-line"><Sparkles size={16} className="text-river" /><span>Putting the pieces together…</span></div>}
+      {error && <p className="result-block result-block--warm mt-4 text-xs text-red-800">{error}</p>}
 
       {result && (
-        <div className="mt-6 rounded-2xl border border-zinc-200 p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">
-              {result.title || "Answer"}
-            </h2>
-            <span className="text-xs font-medium text-zinc-500">
-              {result.confidence || "n/a"}
-            </span>
-          </div>
-          <p className="mt-2 text-sm leading-relaxed text-zinc-700">
-            {result.summary}
-          </p>
-          {result.suggested_questions?.length ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {result.suggested_questions.map((q: string, i: number) => (
-                <button
-                  key={i}
-                  onClick={() => setQuestion(q)}
-                  className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs text-zinc-700"
-                >
-                  {q}
-                </button>
-              ))}
+        <section className="result-card" aria-live="polite">
+          <div className="result-card__header">
+            <div>
+              <div className="flex items-center gap-2 text-[11px] font-semibold text-river"><CheckCircle2 size={14} /> Guide note</div>
+              <h2 className="mt-2">{result.title || "Your answer"}</h2>
             </div>
-          ) : null}
-        </div>
+            <span className="result-card__confidence">{result.confidence || "Ready"}</span>
+          </div>
+          <p className="result-card__summary">{result.summary}</p>
+          {result.cultural_significance ? <div className="result-block result-block--warm"><h3>Cultural significance</h3><p>{result.cultural_significance}</p></div> : null}
+          {result.historical_context ? <div className="result-block"><h3>Historical context</h3><p>{result.historical_context}</p></div> : null}
+          {result.suggested_questions?.length ? <div className="suggested-questions">{result.suggested_questions.map((suggestion: string, index: number) => <button key={index} onClick={() => setQuestion(suggestion)}>{suggestion}</button>)}</div> : null}
+        </section>
       )}
+
+      <div className="info-card">
+        <div className="info-card__header"><h2>Good to know</h2><MapPin size={18} className="text-river" /></div>
+        <p>YatraAI is built for the moments when a place is unfamiliar and you want a useful answer without a long search.</p>
+      </div>
+
+      <BottomNav />
     </div>
   );
 }

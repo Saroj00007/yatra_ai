@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "place": "Bharatpur, Chitwan, Nepal",
+  "records": [
+    {
+      "id": "bharatpur-overview",
+      "topic": "Bharatpur tourism",
+      "title": {
+        "en": "Explore Bharatpur",
+        "ne": "भरतपुर घुमफिर",
+        "hi": "भरतपुर की यात्रा"
+      },
+      "names": ["Bharatpur", "भरतपुर", "भरतपुर पर्यटन"],
+      "keywords": ["bharatpur", "tourism", "visit", "places", "attractions", "घुम्न", "पर्यटन"],
+      "summary": {
+        "en": "Bharatpur is a practical base for exploring Chitwan's wildlife, riverside areas, cultural experiences, and nearby pilgrimage destinations.",
+        "ne": "भरतपुर चितवनका वन्यजन्तु, नदी किनारका क्षेत्र, सांस्कृतिक अनुभव र नजिकका धार्मिक गन्तव्य घुम्नका लागि उपयोगी आधार हो।",
+        "hi": "भरतपुर चितवन के वन्यजीव, नदी किनारे के क्षेत्र, सांस्कृतिक अनुभव और आसपास के धार्मिक स्थलों को देखने का अच्छा आधार है।"
+      },
+      "cultural_significance": {
+        "en": "Bharatpur connects visitors with the living culture, nature, religious traditions, and communities of the wider Chitwan region.",
+        "ne": "भरतपुरले आगन्तुकलाई चितवन क्षेत्रको जीवित संस्कृति, प्रकृति, धार्मिक परम्परा र स्थानीय समुदायसँग जोड्छ।",
+        "hi": "भरतपुर पर्यटकों को चितवन क्षेत्र की जीवंत संस्कृति, प्रकृति, धार्मिक परंपराओं और स्थानीय समुदायों से जोड़ता है।"
+      },
+      "historical_context": {
+        "en": "The city's travel identity has grown alongside the development of the wider Chitwan region as a gateway for nature, culture, and pilgrimage travel.",
+        "ne": "प्रकृति, संस्कृति र तीर्थयात्राका लागि चितवन क्षेत्रको प्रवेशद्वारका रूपमा विकास हुँदै जाँदा भरतपुरको पर्यटन पहिचान पनि विस्तार भएको हो।",
+        "hi": "प्रकृति, संस्कृति और तीर्थयात्रा के प्रवेशद्वार के रूप में चितवन क्षेत्र के विकास के साथ भरतपुर की पर्यटन पहचान भी बनी है।"
+      },
+      "nearby": ["chitwan-national-park", "narayani-river", "devghat", "tharu-culture"],
+      "safety_tip": {
+        "en": "Confirm current opening conditions and transport arrangements before travelling.",
+        "ne": "यात्रा अघि खुल्ने अवस्था र यातायातको व्यवस्था जाँच गर्नुहोस्।",
+        "hi": "यात्रा से पहले खुलने की स्थिति और परिवहन की व्यवस्था की पुष्टि करें।"
+      },
+      "suggested_questions": {
+        "en": ["What can I do in Chitwan National Park?", "What cultural places are near Bharatpur?"],
+        "ne": ["चितवन राष्ट्रिय निकुञ्जमा के गर्न सकिन्छ?", "भरतपुर नजिकका सांस्कृतिक ठाउँ कुन हुन्?"],
+        "hi": ["चितवन राष्ट्रीय उद्यान में क्या कर सकते हैं?", "भरतपुर के पास कौन से सांस्कृतिक स्थान हैं?"]
+      },
+      "source": "Bharatpur Metropolitan City tourism information; verify details before public launch",
+      "verified_at": "2026-09-26"
+    },
+    {
+      "id": "chitwan-national-park",
+      "topic": "Chitwan National Park",
+      "title": {
+        "en": "Chitwan National Park",
+        "ne": "चितवन राष्ट्रिय निकुञ्ज",
+        "hi": "चितवन राष्ट्रीय उद्यान"
+      },
+      "names": ["Chitwan National Park", "चितवन राष्ट्रिय निकुञ्ज", "Chitwan"],
+      "keywords": ["park", "wildlife", "jungle", "safari", "nature", "rhino", "वन्यजन्तु"],
+      "summary": {
+        "en": "Chitwan National Park is a major nature destination near Bharatpur, known for wildlife, forests, rivers, and guided jungle experiences.",
+        "ne": "चितवन राष्ट्रिय निकुञ्ज भरतपुर नजिकको प्रमुख प्राकृतिक गन्तव्य हो, जहाँ वन्यजन्तु, जंगल, नदी र मार्गदर्शकसहितका अनुभव पाइन्छन्।",
+        "hi": "चितवन राष्ट्रीय उद्यान भरतपुर के पास एक प्रमुख प्राकृतिक गंतव्य है, जहां वन्यजीव, जंगल, नदियां और गाइड के साथ अनुभव मिलते हैं।"
+      },
+      "cultural_significance": {
+        "en": "The park is important to the region's conservation culture and shapes how visitors experience Chitwan's relationship with wildlife and nature.",
+        "ne": "निकुञ्ज चितवनको संरक्षण संस्कृतिका लागि महत्वपूर्ण छ र आगन्तुकले वन्यजन्तु तथा प्रकृतिसँगको सम्बन्ध बुझ्ने अवसर दिन्छ।",
+        "hi": "यह उद्यान चितवन की संरक्षण संस्कृति के लिए महत्वपूर्ण है और पर्यटकों को वन्यजीवों तथा प्रकृति के साथ क्षेत्र के संबंध को समझने का अवसर देता है।"
+      },
+      "historical_context": {
+        "en": "Its history is closely connected with the development of protected-area conservation in the Chitwan region; current rules and access conditions should be checked before visiting.",
+        "ne": "यसको इतिहास चितवन क्षेत्रमा संरक्षित क्षेत्र संरक्षणको विकाससँग नजिकबाट जोडिएको छ; भ्रमणअघि हालका नियम र प्रवेश अवस्था जाँच गर्नुहोस्।",
+        "hi": "इसका इतिहास चितवन क्षेत्र में संरक्षित क्षेत्र संरक्षण के विकास से जुड़ा है; यात्रा से पहले वर्तमान नियम और प्रवेश की स्थिति जांचें।"
+      },
+      "nearby": ["bharatpur-overview", "narayani-river", "tharu-culture"],
+      "safety_tip": {
+        "en": "Follow park rules and stay with an authorized guide during wildlife activities.",
+        "ne": "वन्यजन्तु गतिविधिमा निकुञ्जका नियम पालना गरी अधिकृत मार्गदर्शकसँगै हिँड्नुहोस्।",
+        "hi": "वन्यजीव गतिविधियों के दौरान पार्क के नियमों का पालन करें और अधिकृत गाइड के साथ रहें।"
+      },
+      "suggested_questions": {
+        "en": ["What should I carry for a park visit?", "What wildlife might I see?"],
+        "ne": ["निकुञ्ज घुम्न जाँदा के लैजानुपर्छ?", "कस्ता वन्यजन्तु देख्न सकिन्छ?"],
+        "hi": ["पार्क जाते समय क्या ले जाना चाहिए?", "कौन से वन्यजीव दिखाई दे सकते हैं?"]
+      },
+      "source": "Nepal tourism and protected-area information; verify current rules before public launch",
+      "verified_at": "2026-09-26"
+    },
+    {
+      "id": "narayani-river",
+      "topic": "Narayani River",
+      "title": {
+        "en": "Narayani River",
+        "ne": "नारायणी नदी",
+        "hi": "नारायणी नदी"
+      },
+      "names": ["Narayani River", "नारायणी", "Narayani"],
+      "keywords": ["river", "sunset", "riverside", "water", "नदी", "सूर्यास्त"],
+      "summary": {
+        "en": "The Narayani riverside is a popular place to experience open views, local life, and sunset near Bharatpur.",
+        "ne": "नारायणी नदी किनार भरतपुर नजिक खुला दृश्य, स्थानीय जीवन र सूर्यास्त अनुभव गर्ने लोकप्रिय ठाउँ हो।",
+        "hi": "नारायणी नदी का किनारा भरतपुर के पास खुले दृश्य, स्थानीय जीवन और सूर्यास्त का अनुभव करने की लोकप्रिय जगह है।"
+      },
+      "cultural_significance": {
+        "en": "The river is part of everyday life, local traditions, and the cultural landscape of Bharatpur and Chitwan.",
+        "ne": "यो नदी भरतपुर र चितवनको दैनिक जीवन, स्थानीय परम्परा र सांस्कृतिक भू-दृश्यको महत्वपूर्ण हिस्सा हो।",
+        "hi": "यह नदी भरतपुर और चितवन के दैनिक जीवन, स्थानीय परंपराओं और सांस्कृतिक परिवेश का महत्वपूर्ण हिस्सा है।"
+      },
+      "historical_context": {
+        "en": "The Narayani riverside has long been connected with settlement, movement, religious practice, and community life in the region.",
+        "ne": "नारायणी नदी किनार क्षेत्रको बसोबास, आवतजावत, धार्मिक अभ्यास र सामुदायिक जीवनसँग लामो समयदेखि जोडिएको छ।",
+        "hi": "नारायणी नदी का किनारा लंबे समय से क्षेत्र के बसेरे, आवागमन, धार्मिक गतिविधियों और सामुदायिक जीवन से जुड़ा रहा है।"
+      },
+      "nearby": ["bharatpur-overview", "chitwan-national-park", "devghat"],
+      "safety_tip": {
+        "en": "Keep a safe distance from the water and avoid isolated riverbank areas after dark.",
+        "ne": "पानीबाट सुरक्षित दूरी राख्नुहोस् र अँध्यारो भएपछि एकान्त नदी किनारमा नजानुहोस्।",
+        "hi": "पानी से सुरक्षित दूरी रखें और अंधेरा होने के बाद सुनसान नदी किनारे न जाएं।"
+      },
+      "suggested_questions": {
+        "en": ["What is a good time to visit the riverside?", "What should I do near the Narayani River?"],
+        "ne": ["नदी किनार घुम्न उपयुक्त समय कुन हो?", "नारायणी नदी नजिक के गर्न सकिन्छ?"],
+        "hi": ["नदी किनारे जाने का अच्छा समय क्या है?", "नारायणी नदी के पास क्या कर सकते हैं?"]
+      },
+      "source": "Local tourism context; verify site-specific conditions before public launch",
+      "verified_at": "2026-09-26"
+    },
+    {
+      "id": "devghat",
+      "topic": "Devghat",
+      "title": {
+        "en": "Devghat",
+        "ne": "देवघाट",
+        "hi": "देवघाट"
+      },
+      "names": ["Devghat", "देवघाट"],
+      "keywords": ["devghat", "pilgrimage", "culture", "temple", "religion", "तीर्थ"],
+      "summary": {
+        "en": "Devghat is a culturally important pilgrimage destination near Bharatpur, associated with riverside temples and religious traditions.",
+        "ne": "देवघाट भरतपुर नजिकको सांस्कृतिक रूपमा महत्वपूर्ण तीर्थस्थल हो, जहाँ नदी किनारका मन्दिर र धार्मिक परम्परासँग सम्बन्धित अनुभव पाइन्छ।",
+        "hi": "देवघाट भरतपुर के पास एक महत्वपूर्ण सांस्कृतिक तीर्थस्थल है, जो नदी किनारे के मंदिरों और धार्मिक परंपराओं से जुड़ा है।"
+      },
+      "cultural_significance": {
+        "en": "Devghat is valued as a pilgrimage and cultural landscape where visitors can observe religious traditions, river rituals, and local community life.",
+        "ne": "देवघाट धार्मिक परम्परा, नदीसँग जोडिएका अनुष्ठान र स्थानीय सामुदायिक जीवन अनुभव गर्न सकिने महत्वपूर्ण तीर्थ तथा सांस्कृतिक भू-दृश्य हो।",
+        "hi": "देवघाट एक महत्वपूर्ण तीर्थ और सांस्कृतिक क्षेत्र है, जहां पर्यटक धार्मिक परंपराओं, नदी से जुड़े अनुष्ठानों और स्थानीय जीवन को देख सकते हैं।"
+      },
+      "historical_context": {
+        "en": "Devghat's importance comes from long-standing pilgrimage traditions and its place in the religious history of the region; visitors should respect active worship.",
+        "ne": "देवघाटको महत्व लामो समयदेखिको तीर्थ परम्परा र क्षेत्रको धार्मिक इतिहासमा रहेको स्थानबाट आएको हो; आगन्तुकले चलिरहेको पूजाको सम्मान गर्नुपर्छ।",
+        "hi": "देवघाट का महत्व लंबे समय से चली आ रही तीर्थ परंपराओं और क्षेत्र के धार्मिक इतिहास में इसके स्थान से जुड़ा है; पर्यटकों को चल रही पूजा का सम्मान करना चाहिए।"
+      },
+      "nearby": ["bharatpur-overview", "narayani-river", "tharu-culture"],
+      "safety_tip": {
+        "en": "Dress respectfully and follow local customs when visiting religious sites.",
+        "ne": "धार्मिक स्थलमा जाँदा मर्यादित पोसाक लगाई स्थानीय चलनको सम्मान गर्नुहोस्।",
+        "hi": "धार्मिक स्थलों पर सम्मानजनक कपड़े पहनें और स्थानीय रीति-रिवाजों का पालन करें।"
+      },
+      "suggested_questions": {
+        "en": ["Why is Devghat culturally important?", "What should I know before visiting a temple?"],
+        "ne": ["देवघाट सांस्कृतिक रूपमा किन महत्वपूर्ण छ?", "मन्दिर जाँदा के ध्यान दिनुपर्छ?"],
+        "hi": ["देवघाट सांस्कृतिक रूप से महत्वपूर्ण क्यों है?", "मंदिर जाने से पहले क्या जानना चाहिए?"]
+      },
+      "source": "Local tourism context; verify religious-site guidance before public launch",
+      "verified_at": "2026-09-26"
+    },
+    {
+      "id": "tharu-culture",
+      "topic": "Tharu culture",
+      "title": {
+        "en": "Tharu culture",
+        "ne": "थारू संस्कृति",
+        "hi": "थारू संस्कृति"
+      },
+      "names": ["Tharu culture", "थारू", "Tharu"],
+      "keywords": ["tharu", "culture", "food", "dance", "community", "सांस्कृतिक", "खाना"],
+      "summary": {
+        "en": "Tharu cultural experiences can help visitors learn about local food, music, dance, crafts, and community traditions in the Chitwan region.",
+        "ne": "थारू सांस्कृतिक अनुभवबाट चितवन क्षेत्रका स्थानीय खाना, संगीत, नृत्य, हस्तकला र सामुदायिक परम्पराबारे जान्न सकिन्छ।",
+        "hi": "थारू सांस्कृतिक अनुभवों से चितवन क्षेत्र के स्थानीय भोजन, संगीत, नृत्य, हस्तशिल्प और सामुदायिक परंपराओं के बारे में जाना जा सकता है।"
+      },
+      "cultural_significance": {
+        "en": "Tharu culture is central to the identity of the Chitwan region and offers visitors a way to learn from local food, music, dance, craft, and community traditions.",
+        "ne": "थारू संस्कृति चितवन क्षेत्रको पहिचानको महत्वपूर्ण आधार हो र स्थानीय खाना, संगीत, नृत्य, हस्तकला तथा सामुदायिक परम्पराबाट सिक्ने अवसर दिन्छ।",
+        "hi": "थारू संस्कृति चितवन क्षेत्र की पहचान का महत्वपूर्ण हिस्सा है और स्थानीय भोजन, संगीत, नृत्य, हस्तशिल्प तथा सामुदायिक परंपराओं से सीखने का अवसर देती है।"
+      },
+      "historical_context": {
+        "en": "Tharu traditions have been shaped by generations of community life in the Terai and Chitwan region; cultural experiences should be approached with consent and respect.",
+        "ne": "थारू परम्परा तराई र चितवन क्षेत्रमा पुस्तौँदेखि विकसित सामुदायिक जीवनबाट बनेको हो; सांस्कृतिक अनुभव अनुमति र सम्मानका साथ लिनुपर्छ।",
+        "hi": "थारू परंपराएं तराई और चितवन क्षेत्र में पीढ़ियों से चले आ रहे सामुदायिक जीवन से बनी हैं; सांस्कृतिक अनुभव अनुमति और सम्मान के साथ लेना चाहिए।"
+      },
+      "nearby": ["bharatpur-overview", "chitwan-national-park", "devghat"],
+      "safety_tip": {
+        "en": "Ask before photographing people, homes, performances, or ceremonies.",
+        "ne": "मानिस, घर, प्रदर्शन वा समारोहको फोटो खिच्नुअघि अनुमति माग्नुहोस्।",
+        "hi": "लोगों, घरों, प्रस्तुतियों या समारोहों की तस्वीर लेने से पहले अनुमति मांगें।"
+      },
+      "suggested_questions": {
+        "en": ["What local food should I try?", "How can I respectfully experience local culture?"],
+        "ne": ["कुन स्थानीय खाना चाख्नुपर्छ?", "स्थानीय संस्कृति सम्मानपूर्वक कसरी अनुभव गर्ने?"],
+        "hi": ["कौन सा स्थानीय भोजन आजमाना चाहिए?", "स्थानीय संस्कृति का सम्मानपूर्वक अनुभव कैसे करें?"]
+      },
+      "source": "Local tourism context; confirm community-program details before public launch",
+      "verified_at": "2026-09-26"
+    }
+  ]
+}

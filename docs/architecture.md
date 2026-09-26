@@ -1,357 +1,364 @@
-# YatraAI — Two-Feature Hackathon Architecture
+# YatraAI — AI Travel Companion Architecture
 
-## 1. Product focus
+## Product description
 
-YatraAI is a tourist companion for Bharatpur with two connected capabilities:
+YatraAI is a multilingual AI travel companion for tourists visiting Bharatpur and the Chitwan region.
 
-1. **AI tourism assistant:** answer tourist questions about places, objects, culture, food, history, travel tips, and safety through camera, text, and voice.
-2. **Emergency mode:** help tourists reach emergency services and view safety information even when internet access is unavailable.
+Its main feature is an AI guide that helps tourists understand places during their journey. A tourist can ask a question, speak to the assistant, or point the camera at a place or object. YatraAI responds with a concise explanation, practical guidance, confidence, and relevant sources.
 
-The itinerary recommendation feature is intentionally removed from the prototype. A small “nearby places” suggestion can appear after a guide answer, but it is only curated data, not a separate recommendation system.
+The second core feature is offline SOS. It gives tourists access to cached emergency information and phone actions even when mobile internet is unavailable.
 
-The winning product story is simple:
+> **Ask anything. Show anything. Understand your journey. Stay safe.**
 
-> **Ask YatraAI anything about your trip, show it what you see, and get help when you need it.**
+## First prototype scope
 
-## 2. Technology decision
+### AI guide
 
-| Part | Prototype choice | Responsibility |
-|---|---|---|
-| Web app | Next.js PWA | Camera, voice, chat, language, cached SOS interface |
-| API | FastAPI | AI assistant requests, curated context, optional SOS sync |
-| Local data | JSON files | Bharatpur facts and emergency information |
-| AI | One multimodal provider | Tourism answers, image understanding, and multilingual responses |
-| Offline storage | Service worker + IndexedDB | Cached SOS screen, contacts, and local events |
+- Text questions about tourism.
+- Camera questions about landmarks, objects, food, culture, and nature.
+- Browser voice input and speech output.
+- English, Nepali, and Hindi responses.
+- Bharatpur-focused answers using verified local context.
+- Selective web search for current information.
+- Confidence and source information.
+- Cultural significance and historical context are prioritized for place-related questions.
+- Local fallback when the model or internet is unavailable.
 
-Do not add authentication, Supabase, PostgreSQL, Redis, maps, weather, crowd prediction, live trip tracking, or microservices during the prototype phase.
+### Offline SOS
 
-## 3. High-level architecture
+- Cached emergency contacts and instructions.
+- Hospital and police information.
+- Browser location attempt.
+- `tel:` and `sms:` actions.
+- Local event storage for later synchronization.
+- No dependency on the AI assistant or web search.
+
+### Deferred
+
+- Full itinerary recommendation.
+- Booking and payments.
+- User accounts and profiles.
+- Live tourist tracking.
+- Complex agent workflows.
+- Vector databases and model fine-tuning.
+- Weather, maps, and transport integrations beyond a simple web-search answer.
+
+## High-level architecture
 
 ```mermaid
-flowchart LR
+flowchart TD
     Tourist[Tourist phone]
-    Web[Next.js PWA\nAI assistant + SOS]
-    API[FastAPI\nsmall REST API]
-    Guide[(tourism_context.json\nBharatpur facts)]
-    Emergency[(emergency.json\ncontacts + instructions)]
-    AI[AI provider\nvision + chat]
-    Phone[Phone call/SMS app]
+    Web[Next.js PWA\nAI guide + offline SOS]
+    API[FastAPI\nassistant and safety API]
+    Local[(Local tourism context\nverified Bharatpur facts)]
+    Decision{Current information needed?}
+    Search[Web search provider\nplanned integration]
+    Model[GPT multimodal model]
+    Validate[Response validation\nand source grounding]
+    Fallback[Local fallback provider]
+    Emergency[(Cached emergency pack)]
+    Phone[Phone call and SMS actions]
 
     Tourist --> Web
     Web --> API
-    API --> Guide
-    API --> Emergency
-    API --> AI
-    Web --> Phone
+    API --> Local
+    Local --> Decision
+    Decision -->|No| Model
+    Decision -->|Yes| Search
+    Search --> Model
+    Model --> Validate
+    Model -. provider failure .-> Fallback
+    Fallback --> Validate
+    Validate --> Web
+    Web --> Emergency
+    Emergency --> Phone
 ```
 
-The browser never receives the AI API key. The key stays in FastAPI environment variables.
+The browser never receives the AI or search API keys. All external AI and web-search calls are made by FastAPI.
 
-## 4. Responsibilities
+## System responsibilities
 
-### Next.js
+### Next.js PWA
 
-- Render the home, AI assistant, SOS, and settings screens.
-- Capture images from the phone camera.
-- Send text and image questions to FastAPI.
-- Display multilingual assistant answers and confidence states.
-- Use browser text-to-speech where supported.
-- Cache the SOS route and emergency pack.
-- Store emergency contacts and SOS events locally.
-- Open `tel:` and `sms:` actions.
+- Render the home, AI guide, SOS, and settings screens.
+- Capture camera images and handle text input.
+- Use browser speech recognition and speech synthesis.
+- Send assistant requests to FastAPI.
+- Display answers, confidence, local sources, web sources, and fallback states.
+- Cache the SOS screen and emergency pack with the service worker.
+- Store offline SOS events locally.
+- Open call and SMS actions through the phone.
 
 ### FastAPI
 
-- Validate assistant requests.
-- Load the small curated Bharatpur context.
-- Call the AI provider for chat and image understanding.
-- Return one predictable assistant response shape.
-- Return a safe fallback if the provider fails or confidence is low.
-- Provide the emergency pack online when available.
-- Accept locally queued SOS events when connectivity returns.
+- Validate text, conversation, language, image, and location input.
+- Retrieve relevant local tourism context.
+- Decide whether current web information is needed.
+- Call the GPT provider for text and vision answers.
+- Call the web-search provider when current information is needed.
+- Combine local context and web results into one prompt.
+- Validate the model response and source information.
+- Return a safe local answer when an external provider fails.
+- Serve emergency data when the application is online.
 
 ### Local data
 
 ```text
 backend/data/
-  tourism_context.json # Bharatpur facts, tourism topics, nearby suggestions
-  emergency.json    # emergency numbers, hospitals, police, instructions
+  tourism_context.json  # verified Bharatpur and Chitwan facts
+  emergency.json        # emergency contacts and instructions
 ```
 
-The team should verify every fact used in the demo and include its source in the data file.
+Local context is the source of truth for stable project-specific facts. The team should verify every fact used in the presentation.
 
-## 5. AI tourism assistant architecture
-
-The assistant has three input modes:
-
-- **Text:** type any tourism-related question.
-- **Voice:** speak a question and hear the answer.
-- **Vision:** take a photo and ask what the camera is showing.
+## AI guide flow
 
 ```mermaid
 sequenceDiagram
     actor Tourist
-    participant Web as Next.js assistant
+    participant Web as Next.js guide
     participant API as FastAPI
-    participant Data as tourism_context.json
-    participant AI as AI provider
+    participant Local as Local context
+    participant Search as Web search
+    participant GPT as GPT model
 
-    Tourist->>Web: Type, speak, or take photo
-    Web->>API: Text/image + language
-    API->>Data: Load relevant local context
-    API->>AI: Request tourism answer using local context
-    AI-->>API: Answer and confidence
-    API-->>Web: Structured assistant response
-    Web-->>Tourist: Show answer, audio, and nearby suggestions
+    Tourist->>Web: Type, speak, or capture an image
+    Web->>API: Question/image + language
+    API->>Local: Retrieve verified facts
+    API->>API: Decide if current web information is needed
+    opt Current information needed
+        API->>Search: Search location-aware query
+        Search-->>API: Results and source URLs
+    end
+    API->>GPT: Local context + web results + user request
+    GPT-->>API: Structured answer and citations
+    API-->>Web: Validated response
+    Web-->>Tourist: Explanation, confidence, sources, and follow-ups
 ```
 
-The assistant can answer broad tourism questions using the AI model, while Bharatpur-specific facts should come from the curated context. It should not invent locations, historical dates, emergency numbers, prices, or opening hours. For current information that the prototype cannot verify, it should say that the information may have changed.
+## Knowledge strategy
 
-### Tourism context data
+The assistant uses two knowledge layers.
 
-Start with 5–8 highly polished local examples and common tourism topics instead of trying to cover all of Bharatpur:
+### Local context
 
-- One or two cultural landmarks.
-- One museum or historical place.
-- One local food or craft example.
-- One wildlife or nature example.
-- One common tourist question category.
+Use local context for stable landmark explanations, verified cultural and historical summaries, local customs, Bharatpur and Chitwan place names, prepared demo scenarios, and offline fallback answers.
 
-Each record can contain:
+### Web search
 
-```json
-{
-  "id": "bharatpur-museum",
-  "names": {
-    "en": "Bharatpur Museum",
-    "ne": "भरतपुर संग्रहालय",
-    "hi": "भरतपुर संग्रहालय"
-  },
-  "keywords": ["museum", "history", "bharatpur"],
-  "facts": [
-    "Verified local fact one.",
-    "Verified local fact two."
-  ],
-  "nearby": ["nearby-place-id"],
-  "safety_tip": "Stay with your group and follow local instructions.",
-  "source": "Team verified municipal or tourism source"
-}
+Use web search for opening hours, temporary closures, current events, weather, travel conditions, prices, ticket information, transport information, recent tourism notices, and questions that local context cannot answer.
+
+The assistant should not search the web for every question. Searching only when required keeps responses faster, reduces cost, and makes the demo more reliable.
+
+Search queries should include the location where appropriate:
+
+```text
+Bharatpur Chitwan Nepal + user's current question
 ```
 
-### Assistant response
+The model must distinguish stable local facts from time-sensitive web information and tell the tourist when information may have changed.
 
-Both text and image requests return the same shape:
+For the OpenAI implementation, web search can be added through the Responses API web-search tool. The existing GPT chat and vision provider can remain the first prototype path while web search is introduced behind a separate provider adapter.
 
-```json
-{
-  "title": "Bharatpur Museum",
-  "summary": "A short answer in the selected language.",
-  "confidence": "high",
-  "nearby": [
-    {
-      "id": "nearby-place-id",
-      "name": "Nearby place",
-      "reason": "Why it is relevant"
-    }
-  ],
-  "suggested_questions": [
-    "What should I look at here?",
-    "What can I visit nearby?"
-  ]
-}
-```
+## Assistant API
 
-When vision confidence is low, return a clear response such as “I could not identify this confidently. Try a clearer photo or ask me a question.”
-
-Text input and text output are required. Browser speech recognition and text-to-speech are the first voice implementation. A server speech provider can be added only if browser speech is unreliable on the presentation device.
-
-## 6. Offline SOS architecture
-
-SOS must open without waiting for FastAPI. During normal use, the app caches the SOS route and emergency pack.
-
-```mermaid
-flowchart TD
-    Open[Tap SOS] --> Screen[Open cached SOS screen]
-    Screen --> Info[Show cached numbers, hospitals, contacts, and instructions]
-    Screen --> GPS[Try browser location]
-    GPS --> Actions[Show call, SMS, and location actions]
-    Info --> Actions
-    Actions --> Local[Save timestamp and location locally]
-    Local --> Sync[Sync later when internet returns]
-```
-
-Prototype behavior:
-
-- Keep SOS visible from the home screen.
-- Cache the SOS route and emergency pack with a service worker.
-- Store contacts and queued events in IndexedDB.
-- Try `navigator.geolocation` without blocking emergency actions.
-- Use `tel:` to start a call and `sms:` to prepare a message.
-- Save the local SOS event before attempting network sync.
-- Show a clear offline status.
-
-A browser cannot silently place a call or send an SMS. The phone’s call or messaging app must be confirmed by the tourist. Cellular calls and SMS may still work when mobile internet does not. If there is no connectivity of any kind, the app can still show cached information and the last available location.
-
-## 7. Minimal API
+### Current routes
 
 ```text
 GET  /api/health
 POST /api/assistant/chat
 POST /api/assistant/analyze-image
-GET  /api/emergency-pack
-POST /api/sos/sync
 ```
 
-`/api/sos/sync` is best-effort telemetry. The actual emergency actions must work when this endpoint is unreachable.
+Frontend-compatible aliases remain available:
 
-### Guide request examples
+```text
+POST /api/guide/chat
+POST /api/guide/analyze-image
+```
 
-`POST /api/assistant/chat`:
+### Planned web-search configuration
+
+```env
+WEB_SEARCH_ENABLED=true
+WEB_SEARCH_MODEL=gpt-5-mini
+WEB_SEARCH_CONTEXT_SIZE=medium
+```
+
+The search feature is disabled safely when `WEB_SEARCH_ENABLED=false` or the provider is unavailable.
+
+### Chat request
 
 ```json
 {
-  "message": "What is special about this place?",
-  "language": "ne",
-  "context_id": "bharatpur-museum"
+  "message": "Is Chitwan National Park open today?",
+  "language": "en",
+  "conversation": [],
+  "context_id": null,
+  "latitude": null,
+  "longitude": null
 }
 ```
 
-`POST /api/assistant/analyze-image` accepts a compressed image, optional question, selected language, and optional location.
+The `question` field is also accepted as an alias for `message` for compatibility with the current frontend.
 
-### Error response
+### Image request
+
+`POST /api/assistant/analyze-image` accepts multipart form data:
+
+- `image`: JPEG, PNG, or WebP image.
+- `question`: optional question about the image.
+- `language`: `en`, `ne`, or `hi`.
+- `context_id`: optional known tourism topic.
+
+### Response
+
+Text and image requests return the same shape:
 
 ```json
 {
-  "error": "assistant_unavailable",
-  "message": "The AI assistant is temporarily unavailable. Please try again."
+  "title": "Chitwan National Park",
+  "summary": "Chitwan National Park is a major nature destination near Bharatpur...",
+  "cultural_significance": "The park and its surrounding communities are important to the region's living natural and cultural heritage...",
+  "historical_context": "The area became Nepal's first national park in 1973 and has since played a major role in conservation and tourism...",
+  "confidence": "high",
+  "source_ids": ["chitwan-national-park"],
+  "web_sources": [
+    {
+      "title": "Official visitor information",
+      "url": "https://example.com/source",
+      "domain": "example.com"
+    }
+  ],
+  "nearby": ["narayani-river"],
+  "safety_tip": "Follow current park rules and use an authorized guide.",
+  "suggested_questions": ["What should I carry?", "What wildlife might I see?"]
 }
 ```
 
-Never expose provider errors, API keys, or stack traces to the tourist.
+`web_sources` can initially be hidden from the UI and displayed later in a sources panel. Adding this field does not break the current frontend.
 
-## 8. Minimal folder structure
+### Assistant rules
+
+- Answer in the requested language.
+- Keep answers short and useful for mobile and voice playback.
+- When the question is about a specific place, lead with its cultural significance and brief historical context.
+- Even for current questions about a place, explain why the place matters before giving current details.
+- Use local context for stable Bharatpur claims.
+- Use web results for changing information.
+- Never invent prices, hours, emergency numbers, or historical facts.
+- State uncertainty clearly.
+- Return low confidence when evidence is weak.
+- Never use the AI model to decide emergency actions.
+
+For a place-related question, the answer order should be:
+
+```text
+1. What the place is
+2. Why it is culturally significant
+3. Brief historical context
+4. Current or practical information
+5. Safety tip and follow-up question
+```
+
+If reliable historical information is not available, the assistant must say so instead of inventing dates or events.
+
+## Offline SOS flow
+
+SOS is an independent safety module. It must open without waiting for FastAPI, GPT, or web search.
+
+```mermaid
+flowchart TD
+    Tap[Tap SOS] --> Screen[Open cached SOS screen]
+    Screen --> Info[Show cached emergency pack]
+    Screen --> Location[Attempt browser location]
+    Info --> Actions[Call, SMS, and share actions]
+    Location --> Actions
+    Actions --> Local[Store event locally]
+    Local --> Sync[Best-effort sync when online]
+```
+
+Prototype rules:
+
+- Cache the SOS route and emergency data.
+- Save the local event before attempting synchronization.
+- Do not block call or SMS actions while waiting for location.
+- Explain that a browser cannot silently place calls or send messages.
+- Use verified Nepal and Bharatpur emergency information.
+
+## Minimal folder structure
 
 ```text
 yatraai/
   app/
-    page.tsx                 # home and feature links
-    assistant/page.tsx       # camera, voice, and chat
-    sos/page.tsx             # offline SOS
-    settings/page.tsx        # language and contacts
-  components/
-    GuideAnswer.tsx
-    CameraCapture.tsx
-    EmergencyActions.tsx
-  lib/
-    api.ts
-    offline.ts
+    page.tsx
+    scan/page.tsx
+    sos/page.tsx
+    settings/page.tsx
+    lib/api.ts
+  backend/
+    main.py
+    config.py
+    schemas.py
+    context.py
+    provider.py
+    service.py
+    routes/
+      assistant.py
+      sos.py                  # next SOS backend slice
+    data/
+      tourism_context.json
+      emergency.json          # next SOS backend slice
   public/
     emergency-pack.json
     sw.js
-  backend/
-    main.py
-    data/
-      tourism_context.json
-      emergency.json
-    routes/
-      assistant.py
-      sos.py
 ```
 
-The current repository is a starter Next.js app. The `backend/` directory and feature routes will be added during implementation.
+## Delivery order
 
-## 9. Build order
+### Phase 1 — Working AI guide
 
-### Step 1 — Assistant text flow
+- Text chat with local context.
+- GPT provider and fallback.
+- Camera analysis.
+- English, Nepali, and Hindi responses.
+- Browser voice input and output.
 
-- Add the FastAPI skeleton and health endpoint.
-- Add `tourism_context.json` with local facts and tourism topics.
-- Implement `/api/assistant/chat`.
-- Build the assistant screen with text input and answer display.
+### Phase 2 — Selective web search
 
-### Step 2 — Assistant vision and voice flow
+- Detect current-information questions.
+- Add the web-search provider adapter.
+- Combine local context and search results.
+- Return web source URLs.
+- Test provider failure and offline fallback.
 
-- Add camera capture.
-- Implement `/api/assistant/analyze-image`.
-- Add confidence and fallback states.
-- Add voice input and text-to-speech.
-- Add nearby suggestions from curated context.
+### Phase 3 — Offline SOS
 
-### Step 3 — Offline SOS flow
-
-- Add the emergency pack.
-- Add service worker caching.
-- Add contacts, geolocation, call, and SMS actions.
-- Save and later sync SOS events.
+- Verify emergency data.
+- Cache the SOS route and emergency pack.
+- Add location, call, SMS, and local event storage.
 - Test with airplane mode enabled.
 
-### Step 4 — Polish and proof
+### Phase 4 — Presentation polish
 
-- Test English, Nepali, and Hindi.
-- Test the guide with a provider failure.
-- Test SOS with internet disabled.
-- Improve loading states, accessibility, and mobile layout.
-- Prepare the final two-minute demonstration.
+- Prepare one text, one voice, and one camera scenario.
+- Demonstrate a web-search question.
+- Demonstrate SOS with internet disabled.
+- Show confidence and source information.
 
-## 10. What can make this win
-
-### Local depth instead of a generic chatbot
-
-Use verified Bharatpur facts, local names, cultural context, and practical visitor tips. The AI can answer broad tourism questions, but local claims should come from the team’s context data.
-
-### A visible multilingual experience
-
-Demonstrate the same question by text and voice in English, Nepali, and Hindi. Let the judge see the language switch and hear one answer if browser speech is stable.
-
-### Prove offline SOS live
-
-During the presentation, enable airplane mode and open SOS. Show the cached emergency pack, location attempt, call action, and prepared SMS. This is a memorable differentiator because it demonstrates a real constraint rather than only an AI response.
-
-### Make uncertainty honest
-
-Show confidence and use a fallback for unknown images. This makes the system feel trustworthy and avoids presenting hallucinated tourism information as fact.
-
-### Keep the demo fast and human
-
-Use large mobile buttons, minimal typing, short answers, and one clear next action. Do not make the judge navigate through registration or a complex dashboard.
-
-### Tell one complete story
-
-1. A visitor asks a tourism question or shows an unfamiliar Bharatpur landmark.
-2. The AI assistant explains it in the visitor’s language and voice.
-3. The assistant suggests one or two relevant nearby experiences.
-4. The visitor enables airplane mode.
-5. YatraAI still provides emergency help.
-
-### Show measurable proof
-
-Track simple demo facts:
-
-- Number of supported landmarks.
-- Number of supported languages.
-- Time from photo capture to answer.
-- SOS screen load time in airplane mode.
-- Number of emergency actions available offline.
-
-## 11. Demo acceptance criteria
+## Definition of done
 
 The prototype is ready when:
 
-1. A tourist asks a broad tourism question and receives a concise answer.
-2. A tourist speaks a question and receives a text or spoken answer.
-3. A tourist scans a supported place or object and receives a summary with confidence and nearby suggestions.
-4. The same assistant response can be shown in English, Nepali, and Hindi.
-5. A tourist enables airplane mode, opens SOS, sees cached emergency information, and can start a call or prepared SMS.
-6. AI or network failure produces a friendly fallback instead of breaking the app.
+1. A tourist can ask a general tourism question and receive a concise answer.
+2. A tourist can use the camera and receive an explanation with confidence.
+3. A tourist can ask by voice and hear the answer.
+4. The assistant responds in English, Nepali, and Hindi for prepared examples.
+5. A current-information question can use web search and show sources.
+6. Web-search or GPT failure produces a friendly local fallback.
+7. SOS opens in airplane mode with cached emergency information.
+8. Call and prepared SMS actions remain available offline.
 
-## 12. Explicitly postponed
+## Future expansion
 
-- Itinerary recommendation system.
-- User authentication and profiles.
-- Tourist, guide, and admin roles.
-- Human guide verification and trip assignment.
-- Live location monitoring.
-- Risk-zone alerts and timed check-ins.
-- Weather, crowd, maps, and route APIs.
-- Feedback analytics and model fine-tuning.
-- Supabase, PostgreSQL, Redis, vector databases, and microservices.
+After the prototype is stable, YatraAI can add itinerary planning, personalized recommendations, live maps, weather APIs, transport data, user preferences, downloadable offline knowledge packs, local business integrations, and municipal tourism analytics without changing the core product identity.
