@@ -100,7 +100,7 @@ export default function ScanPage() {
         </Link>
         <div className="page-heading">
           <h1>Look closer</h1>
-          <p>Use a photo or ask in your own words.</p>
+          <p>Show us something, or ask us anything.</p>
         </div>
         {camera && (
           <button onClick={stopCamera} className="back-link ml-auto" aria-label="Close camera">
@@ -132,7 +132,7 @@ export default function ScanPage() {
 
       <form onSubmit={askText} className="question-box">
         <MessageCircle size={16} className="text-river" aria-hidden="true" />
-        <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask about a place, object, or food" aria-label="Ask a question" />
+        <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask anything — a place, idea, or question" aria-label="Ask a question" />
         <button type="submit" disabled={loading || !question.trim()} aria-label="Send question">
           <Send size={15} strokeWidth={2.2} />
         </button>
@@ -159,7 +159,7 @@ export default function ScanPage() {
 
       <div className="info-card">
         <div className="info-card__header"><h2>Good to know</h2><MapPin size={18} className="text-river" /></div>
-        <p>YatraAI is built for the moments when a place is unfamiliar and you want a useful answer without a long search.</p>
+        <p>YatraAI can help with everyday questions, explanations, and unfamiliar places without making you choose a category first.</p>
       </div>
 
       <BottomNav />

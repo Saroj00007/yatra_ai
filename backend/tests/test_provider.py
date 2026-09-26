@@ -62,6 +62,30 @@ async def test_openai_compatible_provider_parses_json_code_fence(monkeypatch):
     assert response.confidence == "high"
 
 
+def test_provider_prompt_allows_general_conversation():
+    prompt = OpenAICompatibleProvider._system_prompt()
+
+    assert "general-purpose conversational assistant" in prompt
+    assert "Do not assume every request is tourism-related" in prompt
+    assert "do not force cultural or historical sections" in prompt
+
+
+def test_provider_normalizes_numeric_confidence():
+    assert OpenAICompatibleProvider._confidence_label(0.95) == "high"
+    assert OpenAICompatibleProvider._confidence_label("0.6") == "medium"
+    assert OpenAICompatibleProvider._confidence_label(20) == "low"
+
+
+def test_provider_normalizes_empty_or_scalar_list_fields():
+    normalized = OpenAICompatibleProvider._normalize_payload(
+        {"title": "Hello", "summary": "Hi there", "confidence": 0.9, "nearby": ""}
+    )
+
+    assert normalized["nearby"] == []
+    assert normalized["source_ids"] == []
+    assert normalized["suggested_questions"] == []
+
+
 class BrokenProvider:
     async def answer_text(self, request, contexts):
         raise ProviderError("simulated provider failure")

@@ -24,9 +24,9 @@ class FallbackProvider:
         language = request.language
         default_titles = {"en": "YatraAI", "ne": "YatraAI सहायक", "hi": "YatraAI सहायक"}
         default_summaries = {
-            "en": "I do not have enough verified local information for that question yet. Try asking about Bharatpur, Chitwan National Park, the Narayani River, Devghat, or Tharu culture.",
-            "ne": "यस प्रश्नका लागि मसँग पर्याप्त प्रमाणित स्थानीय जानकारी छैन। भरतपुर, चितवन राष्ट्रिय निकुञ्ज, नारायणी नदी, देवघाट वा थारू संस्कृतिबारे सोध्नुहोस्।",
-            "hi": "इस प्रश्न के लिए मेरे पास पर्याप्त सत्यापित स्थानीय जानकारी नहीं है। भरतपुर, चितवन राष्ट्रीय उद्यान, नारायणी नदी, देवघाट या थारू संस्कृति के बारे में पूछें।",
+            "en": "I’m running in offline fallback mode, so I can only give reliable answers from the verified local context currently available. General conversation will work when the AI provider is connected.",
+            "ne": "म अहिले अफलाइन fallback मोडमा छु, त्यसैले उपलब्ध प्रमाणित स्थानीय सन्दर्भबाट मात्र भरपर्दो उत्तर दिन सक्छु। AI provider जडान भएपछि सामान्य कुराकानी पनि गर्न सक्छु।",
+            "hi": "मैं अभी offline fallback mode में हूँ, इसलिए उपलब्ध सत्यापित स्थानीय संदर्भ से ही भरोसेमंद उत्तर दे सकता हूँ। AI provider जुड़ने पर सामान्य बातचीत भी कर सकता हूँ।",
         }
         title = record.get("title", {}).get(language) or record.get("topic", default_titles[language])
         summary = record.get("summary", {}).get(language) or record.get("summary", {}).get("en")
@@ -133,7 +133,9 @@ class OpenAICompatibleProvider:
                     part.get("text", "") for part in content if isinstance(part, dict)
                 )
             parsed = json.loads(self._strip_code_fence(str(content)))
-            return AssistantResponse.model_validate(parsed)
+            if not isinstance(parsed, dict):
+                raise TypeError("AI provider response must be a JSON object")
+            return AssistantResponse.model_validate(self._normalize_payload(parsed))
         except (KeyError, IndexError, TypeError, ValueError) as error:
             raise ProviderError("AI provider returned an invalid response") from error
 
@@ -148,6 +150,44 @@ class OpenAICompatibleProvider:
         content = content.strip()
         match = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", content, flags=re.DOTALL | re.IGNORECASE)
         return match.group(1).strip() if match else content
+
+    @staticmethod
+    def _confidence_label(value: Any) -> str:
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"high", "medium", "low"}:
+                return normalized
+            try:
+                value = float(normalized)
+            except ValueError as error:
+                raise ValueError("confidence must be high, medium, low, or a numeric score") from error
+
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            score = float(value)
+            if score > 1:
+                score /= 100
+            if 0 <= score <= 1:
+                if score >= 0.8:
+                    return "high"
+                if score >= 0.5:
+                    return "medium"
+                return "low"
+
+        raise ValueError("confidence must be high, medium, low, or a numeric score")
+
+    @classmethod
+    def _normalize_payload(cls, payload: dict[str, Any]) -> dict[str, Any]:
+        normalized = dict(payload)
+        normalized["confidence"] = cls._confidence_label(normalized.get("confidence"))
+        for field in ("source_ids", "nearby", "suggested_questions"):
+            value = normalized.get(field)
+            if value is None or (isinstance(value, str) and not value.strip()):
+                normalized[field] = []
+            elif isinstance(value, str):
+                normalized[field] = [value]
+            elif not isinstance(value, list):
+                raise TypeError(f"{field} must be a list")
+        return normalized
 
     def _text_messages(
         self,
@@ -169,18 +209,19 @@ class OpenAICompatibleProvider:
     @staticmethod
     def _system_prompt() -> str:
         return (
-            "You are YatraAI, a concise and trustworthy tourism assistant for Bharatpur, "
-            "Chitwan, Nepal. Use the supplied local context for local claims. Do not invent "
-            "prices, opening hours, emergency numbers, distances, or historical facts. "
-            "When the user asks about a specific place, landmark, cultural site, or object, "
-            "prioritize its cultural significance and a brief historical context before "
-            "current travel details. If reliable history is unavailable, say that clearly "
-            "instead of guessing. Even when the user asks about current hours or prices, "
-            "include a short cultural or historical explanation first when the subject is a "
-            "place. "
-            "If the context is insufficient, say so and use low confidence. Answer in the "
+            "You are YatraAI, a helpful and concise general-purpose conversational assistant "
+            "with strong local knowledge support for Bharatpur, Chitwan, and Nepal. Answer "
+            "ordinary questions, casual conversation, explanations, brainstorming, and travel "
+            "questions naturally. Do not assume every request is tourism-related, and do not "
+            "force cultural or historical sections onto general questions. Use the supplied "
+            "verified local context when the user asks about Bharatpur or another context-specific "
+            "local fact. For claims about prices, opening hours, emergency numbers, distances, "
+            "current events, or historical facts, do not invent details; state when live or "
+            "verified information is unavailable. If local context is insufficient, explain that "
+            "limitation, then answer from general knowledge when appropriate. Answer in the "
             "requested language. Return JSON only with exactly these fields: title, summary, "
-            "cultural_significance, historical_context, confidence (high, medium, or low), "
+            "cultural_significance, historical_context, confidence (the string high, medium, "
+            "or low; never a number), "
             "source_ids, nearby, safety_tip, and suggested_questions."
         )
 
@@ -192,6 +233,6 @@ class OpenAICompatibleProvider:
     def _user_prompt(request: AssistantRequest, context_text: str) -> str:
         return (
             f"Requested language: {request.language}\n"
-            f"Tourist question: {request.message}\n"
-            f"Verified local context: {context_text}"
+            f"User message: {request.message}\n"
+            f"Verified local context, use only when relevant: {context_text}"
         )
